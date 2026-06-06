@@ -1,0 +1,12 @@
+# generated-by: agent-sandbox  (auto-generated from environment; delete this line to manage manually)
+model_provider = "OpenAI"
+model = "${CODEX_MODEL}"
+review_model = "${CODEX_MODEL}"
+model_reasoning_effort = "${CODEX_MODEL_REASONING_EFFORT}"
+disable_response_storage = true
+
+[model_providers.OpenAI]
+name = "OpenAI"
+base_url = "${CODEX_BASE_URL}"
+wire_api = "${CODEX_WIRE_API:-responses}"
+requires_openai_auth = true

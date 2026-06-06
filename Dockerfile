@@ -1,5 +1,8 @@
 FROM ubuntu:24.04
 
+LABEL org.opencontainers.image.title="agent-sandbox" \
+      org.opencontainers.image.description="Claude Code / Codex CLI sandbox"
+
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
@@ -21,7 +24,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     build-essential \
     python3 \
-    python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 Node.js 22 (Claude Code / Codex 均需要 Node 18+)
@@ -43,16 +45,17 @@ ARG CODEX_VERSION=latest
 
 # Claude Code
 RUN if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then \
-        npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}; \
+        npm install -g --no-fund --no-audit @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}; \
     fi
 
 # OpenAI Codex CLI
 RUN if [ "$INSTALL_CODEX" = "true" ]; then \
-        npm install -g @openai/codex@${CODEX_VERSION}; \
+        npm install -g --no-fund --no-audit @openai/codex@${CODEX_VERSION}; \
     fi
 
-# 入口脚本：启动时根据环境变量生成 Codex 第三方中转配置
+# 入口脚本 + 配置模板
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY templates/ /usr/local/share/agent-sandbox/templates/
 
 USER agent
 WORKDIR /workspace
