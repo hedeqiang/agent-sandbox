@@ -9,6 +9,7 @@ services:
         # ===== 版本（默认最新版）=====
         CLAUDE_CODE_VERSION: ${CLAUDE_CODE_VERSION:-latest}
         CODEX_VERSION: ${CODEX_VERSION:-latest}
+    image: agent-sandbox:latest
     container_name: agent-sandbox
     hostname: agent-sandbox
     # 交互式终端支持

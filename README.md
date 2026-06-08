@@ -21,6 +21,7 @@ A sandboxed Ubuntu container for running AI coding agents — [Claude Code](http
 ├── Dockerfile          # Ubuntu + Node.js + Claude Code + Codex image
 ├── docker-compose.yml  # Container orchestration
 ├── entrypoint.sh       # Generates Codex gateway config from env vars on startup
+├── sandbox             # Wrapper script to launch the sandbox from any directory
 ├── .env.example        # Build & authentication config template
 ├── workspace/          # Working directory (mounted at /workspace in the container)
 └── README.md
@@ -93,6 +94,31 @@ codex    # Codex CLI
 ```
 
 Put the projects you want to work on into the host's `workspace/` directory — they will be available under `/workspace` inside the container.
+
+## Use from any directory (recommended)
+
+If you don't want to keep everything inside the fixed `workspace/` folder, use the bundled `sandbox` script: it mounts **whatever directory you're currently in** into the container, reuses the persistent `agent-home` volume (credentials are kept), and the container is removed on exit.
+
+Symlink the script into your PATH once:
+
+```bash
+ln -s "$(pwd)/sandbox" /opt/homebrew/bin/sandbox   # adjust the path for your setup
+```
+
+> Use a symlink (`ln -s`), not a copy, so the script can still locate the project's `.env` and `docker-compose.yml`.
+
+Then, from any directory:
+
+```bash
+cd ~/any/project/dir
+sandbox          # enter the container's bash; the current dir is /workspace
+sandbox claude   # launch Claude Code directly
+sandbox codex    # launch Codex CLI directly
+```
+
+On first run, if the image hasn't been built yet, the script builds it via `docker compose build` (reading the install toggles/versions from `.env`). Each directory gets its own ephemeral container — you can run several at once — and they all share the same `agent-home` credential volume, so no re-login when switching directories.
+
+> Difference from the `docker compose` flow below: compose runs a long-lived container with the fixed `./workspace` mount; `sandbox` runs an ephemeral container mounting the current directory. Both can coexist and share the same credential volume.
 
 ## Common Operations
 

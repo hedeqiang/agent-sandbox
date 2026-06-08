@@ -21,6 +21,7 @@
 ├── Dockerfile          # Ubuntu + Node.js + Claude Code + Codex 镜像
 ├── docker-compose.yml  # 容器编排配置
 ├── entrypoint.sh       # 启动时根据环境变量生成 Codex 中转配置
+├── sandbox             # 在任意目录启动沙箱的 wrapper 脚本
 ├── .env.example        # 构建与认证配置模板
 ├── workspace/          # 工作目录（挂载到容器内 /workspace）
 └── README.md
@@ -93,6 +94,31 @@ codex    # Codex CLI
 ```
 
 把要处理的项目放进宿主机的 `workspace/` 目录，容器内在 `/workspace` 下即可访问。
+
+## 在任意目录使用（推荐）
+
+如果不想把代码都塞进固定的 `workspace/`，可以用项目里的 `sandbox` 脚本：它会把**你当前所在的目录**挂载进容器，并复用持久化的 `agent-home` 卷（登录凭证不丢），容器用完即删。
+
+一次性把脚本软链到 PATH：
+
+```bash
+ln -s "$(pwd)/sandbox" /opt/homebrew/bin/sandbox   # 路径按你的环境调整
+```
+
+> 用软链（`ln -s`）而非拷贝，脚本才能找到项目里的 `.env` 和 `docker-compose.yml`。
+
+之后在任意目录使用：
+
+```bash
+cd ~/任意/项目目录
+sandbox          # 进容器 bash，当前目录即 /workspace
+sandbox claude   # 直接起 Claude Code
+sandbox codex    # 直接起 Codex CLI
+```
+
+首次运行若镜像未构建，脚本会自动 `docker compose build`（读取 `.env` 的安装开关/版本）。每个目录是独立的一次性容器，可同时开多个；凭证共享同一个 `agent-home` 卷，换目录无需重新登录。
+
+> 与下方 `docker compose` 方式的区别：compose 跑的是固定挂载 `./workspace` 的常驻容器；`sandbox` 跑的是挂载当前目录的一次性容器。两者可共存，共享同一份凭证卷。
 
 ## 常用操作
 

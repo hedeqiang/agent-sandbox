@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ============================================================
+# sandbox —— 在任意目录启动 AI coding agent 沙箱
+#
+# 把【当前目录】挂载进容器的 /workspace，并复用持久化的
+# agent-home 卷（登录凭证、~/.claude、~/.codex 等不会丢）。
+# 容器用完即删（--rm），但凭证留在卷里，下次免登录。
+#
+# 用法：
+#   sandbox            # 进入容器 bash
+#   sandbox claude     # 直接起 Claude Code
+#   sandbox codex      # 直接起 Codex CLI
+#   sandbox <任意命令>
+# ============================================================
+
+# 解析脚本自身所在目录（支持被 symlink 到 PATH）
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SANDBOX_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+IMAGE="agent-sandbox:latest"
+ENV_FILE="$SANDBOX_DIR/.env"
+
+# 镜像不存在时先用 compose 构建（会读取 .env 里的安装开关/版本）
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+    echo "[sandbox] 镜像 $IMAGE 不存在，正在构建…"
+    docker compose -f "$SANDBOX_DIR/docker-compose.yml" build
+fi
+
+ENV_ARGS=()
+[ -f "$ENV_FILE" ] && ENV_ARGS=(--env-file "$ENV_FILE")
+
+exec docker run --rm -it \
+    "${ENV_ARGS[@]}" \
+    -v "$PWD":/workspace \
+    -v agent-home:/home/agent \
+    -w /workspace \
+    "$IMAGE" "${@:-bash}"
